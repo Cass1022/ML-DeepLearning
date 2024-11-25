@@ -1,60 +1,100 @@
 import numpy as np
-import keras
-from keras import layers
-import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
-import os
-import certifi
+import tensorflow as tf
+from tensorflow import keras
+from keras import layers
 
-os.environ["SSL_CERT_FILE"] = certifi.where()
 
-tfds.disable_progress_bar()
+path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID"
+test_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Test"
+train_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train"
 
-train_ds, validation_ds, test_ds = tfds.load(
-    "cats_vs_dogs",
-    # Reserve 10% for validation and 10% for test
-    split=["train[:40%]", "train[40%:50%]", "train[50%:60%]"],
-    as_supervised=True,  # Include labels
+train_ds = keras.utils.image_dataset_from_directory(
+    path,
+    labels="inferred",
+    label_mode="int",
+    class_names=None,
+    color_mode="rgb",
+    batch_size=64,
+    image_size=(227, 227),
+    shuffle=True,
+    seed=None,
+    validation_split=None,
+    subset=None,
+    interpolation="bilinear",
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+    pad_to_aspect_ratio=False,
+    data_format=None,
+    verbose=True,
 )
 
-print(f"Number of training samples: {train_ds.cardinality()}")
-print(f"Number of validation samples: {validation_ds.cardinality()}")
-print(f"Number of test samples: {test_ds.cardinality()}")
+test_ds = keras.utils.image_dataset_from_directory(
+    path,
+    labels="inferred",
+    label_mode="int",
+    class_names=None,
+    color_mode="rgb",
+    batch_size=64,
+    image_size=(227, 227),
+    shuffle=True,
+    seed=None,
+    validation_split=None,
+    subset=None,
+    interpolation="bilinear",
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+    pad_to_aspect_ratio=False,
+    data_format=None,
+    verbose=True,
+)
+
+validation_ds = keras.utils.image_dataset_from_directory(
+    path,
+    labels="inferred",
+    label_mode="int",
+    class_names=None,
+    color_mode="rgb",
+    batch_size=64,
+    image_size=(227, 227),
+    shuffle=True,
+    seed=100,
+    validation_split=0.2,
+    subset="validation",
+    interpolation="bilinear",
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+    pad_to_aspect_ratio=False,
+    data_format=None,
+    verbose=True,
+)
 
 plt.figure(figsize=(10, 10))
-for i, (image, label) in enumerate(train_ds.take(9)):
-    ax = plt.subplot(3, 3, i + 1)
-    plt.imshow(image)
-    plt.title(int(label))
-    plt.axis("off")
+for images, labels in train_ds.take(1):  # Take one batch of 32 images
+    for i in range(9):  # Display 9 images
+        ax = plt.subplot(3, 3, i + 1)
+        plt.imshow(images[i].numpy().astype("uint8"))
+        plt.title(f"Label: {labels[i].numpy()}")  # Get the label
+        plt.axis("off")
+
+plt.tight_layout()
+plt.show()
 
 resize_fn = keras.layers.Resizing(150, 150)
 
 train_ds = train_ds.map(lambda x, y: (resize_fn(x), y))
-validation_ds = validation_ds.map(lambda x, y: (resize_fn(x), y))
-test_ds = test_ds.map(lambda x, y: (resize_fn(x), y))
+validation_ds = train_ds.map(lambda x, y: (resize_fn(x), y))
+testing_ds = test_ds.map(lambda x, y: (resize_fn(x), y))
 
-augmentation_layers = [
-    layers.RandomFlip("horizontal"),
-    layers.RandomRotation(0.1),
-]
+data_augmentation = keras.Sequential(
+    [
+        layers.RandomFlip("horizontal"),
+        layers.RandomRotation(0.1),
+    ]
+)
 
-
-def data_augmentation(x):
-    for layer in augmentation_layers:
-        x = layer(x)
-    return x
-
-
-train_ds = train_ds.map(lambda x, y: (data_augmentation(x), y))
-
-from tensorflow import data as tf_data
-
-batch_size = 64
-
-train_ds = train_ds.batch(batch_size).prefetch(tf_data.AUTOTUNE).cache()
-validation_ds = validation_ds.batch(batch_size).prefetch(tf_data.AUTOTUNE).cache()
-test_ds = test_ds.batch(batch_size).prefetch(tf_data.AUTOTUNE).cache()
+# Apply the augmentation to the training dataset
+train_ds = train_ds.map(lambda x, y: (data_augmentation(x, training=True), y))
 
 for images, labels in train_ds.take(1):
     plt.figure(figsize=(10, 10))
@@ -65,6 +105,9 @@ for images, labels in train_ds.take(1):
         plt.imshow(np.array(augmented_image[0]).astype("int32"))
         plt.title(int(labels[0]))
         plt.axis("off")
+
+plt.tight_layout()
+plt.show()
 
 base_model = keras.applications.Xception(
     weights="imagenet",  # Load weights pre-trained on ImageNet.
