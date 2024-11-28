@@ -1,36 +1,36 @@
+import shutil
+import os
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
 from tensorflow import keras
 from keras import layers
 
+'''
+source_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train"
+new_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train_Updated"
 
-path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID"
-test_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Test"
-train_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train"
+non_dr_dir = os.path.join(new_path, "NonDR")
+dr_dir = os.path.join(new_path, "DR")
+os.makedirs(non_dr_dir, exist_ok=True)
+os.makedirs(dr_dir, exist_ok=True)
 
-train_ds = keras.utils.image_dataset_from_directory(
-    path,
-    labels="inferred",
-    label_mode="int",
-    class_names=None,
-    color_mode="rgb",
-    batch_size=64,
-    image_size=(227, 227),
-    shuffle=True,
-    seed=None,
-    validation_split=None,
-    subset=None,
-    interpolation="bilinear",
-    follow_links=False,
-    crop_to_aspect_ratio=False,
-    pad_to_aspect_ratio=False,
-    data_format=None,
-    verbose=True,
-)
+for filename in os.listdir(source_path):
+    label = filename.split('-')[-1].split('.')[0]
+    file_source = os.path.join(source_path, filename)
+    if label == "0":  # Non-DR
+        destination_path = os.path.join(non_dr_dir, filename)
+        shutil.move(file_source, destination_path)
+    elif label in ["3", "4"]:  # DR
+        destination_path = os.path.join(dr_dir, filename)
+        shutil.move(file_source, destination_path)
+'''
 
+test_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Test_Updated"
+train_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train_Updated"
+
+print("--- TESTING DATASET ---")
 test_ds = keras.utils.image_dataset_from_directory(
-    path,
+    test_path,
     labels="inferred",
     label_mode="int",
     class_names=None,
@@ -49,8 +49,9 @@ test_ds = keras.utils.image_dataset_from_directory(
     verbose=True,
 )
 
-validation_ds = keras.utils.image_dataset_from_directory(
-    path,
+print("--- TRAINING DATASET ---")
+train_ds = keras.utils.image_dataset_from_directory(
+    train_path,
     labels="inferred",
     label_mode="int",
     class_names=None,
@@ -58,7 +59,28 @@ validation_ds = keras.utils.image_dataset_from_directory(
     batch_size=64,
     image_size=(227, 227),
     shuffle=True,
-    seed=100,
+    seed=123,
+    validation_split=0.2,
+    subset="training",
+    interpolation="bilinear",
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+    pad_to_aspect_ratio=False,
+    data_format=None,
+    verbose=True,
+)
+
+print("--- VALIDATION DATASET ---")
+validation_ds = keras.utils.image_dataset_from_directory(
+    train_path,
+    labels="inferred",
+    label_mode="int",
+    class_names=None,
+    color_mode="rgb",
+    batch_size=64,
+    image_size=(227, 227),
+    shuffle=True,
+    seed=123,
     validation_split=0.2,
     subset="validation",
     interpolation="bilinear",
@@ -68,6 +90,7 @@ validation_ds = keras.utils.image_dataset_from_directory(
     data_format=None,
     verbose=True,
 )
+
 
 plt.figure(figsize=(10, 10))
 for images, labels in train_ds.take(1):  # Take one batch of 32 images
@@ -144,7 +167,7 @@ model.compile(
     metrics=[keras.metrics.BinaryAccuracy()],
 )
 
-epochs = 2
+epochs = 7
 print("Fitting the top layer of the model")
 model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
