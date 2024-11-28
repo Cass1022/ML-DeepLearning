@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow import keras
 from keras import layers
+from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, ConfusionMatrixDisplay
+import pandas as pd
+
 
 '''
 source_path = "/Users/cassidysieverson/Documents/GitHub/ML-DeepLearning/DS_IDRID/Train"
@@ -107,7 +110,7 @@ resize_fn = keras.layers.Resizing(150, 150)
 
 train_ds = train_ds.map(lambda x, y: (resize_fn(x), y))
 validation_ds = train_ds.map(lambda x, y: (resize_fn(x), y))
-testing_ds = test_ds.map(lambda x, y: (resize_fn(x), y))
+test_ds = test_ds.map(lambda x, y: (resize_fn(x), y))
 
 data_augmentation = keras.Sequential(
     [
@@ -167,7 +170,7 @@ model.compile(
     metrics=[keras.metrics.BinaryAccuracy()],
 )
 
-epochs = 7
+epochs = 5
 print("Fitting the top layer of the model")
 model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
@@ -191,3 +194,24 @@ model.fit(train_ds, epochs=epochs, validation_data=validation_ds)
 
 print("Test dataset evaluation")
 model.evaluate(test_ds)
+
+y_true = []
+y_pred = []
+
+for images, labels in test_ds:
+    predictions = model.predict(images)
+    y_true.extend(labels.numpy())  # Ground truth labels
+    y_pred.extend((predictions > 0).astype(int).flatten())  # Predicted labels (binary)
+
+# Calculate accuracy, sensitivity, specificity, and confusion matrix
+accuracy = accuracy_score(y_true, y_pred)
+sensitivity = recall_score(y_true, y_pred, pos_label=1)
+specificity = recall_score(y_true, y_pred, pos_label=0)
+conf_matrix = confusion_matrix(y_true, y_pred)
+
+# Display the metrics
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Sensitivity: {sensitivity:.4f}")
+print(f"Specificity: {specificity:.4f}")
+print(f"Confusion matrix: \n{conf_matrix}")
+
